@@ -16,9 +16,10 @@ const defaultCluster = superAdmin
 const aFoo = defaultCluster
 .namespace('application')
 .set('foo', 'foo')
+.set('not-used', 'not-used')
 .publish()
 
-const aFoo2 = defaultCluster
+defaultCluster
 .namespace('foo2')
 .set('foo', 'foo2')
 .publish()
@@ -29,7 +30,51 @@ test.before(async () => {
   } = await prepare())
 })
 
-test('integrated', async t => {
+test('empty', async t => {
+  const client = apollo()
+  await client.ready()
+
+  t.throws(() => client.get('FOO'), {
+    code: 'KEY_NOT_DECLARED'
+  })
+})
+
+test('INVALID_KEY_OPTION', async t => {
+  t.throws(() => apollo({
+    keys: {
+      FOO: {
+        key: 'foo',
+        boooom: 1
+      }
+    }
+  }), {
+    code: 'INVALID_KEY_OPTION'
+  })
+})
+
+test('INVALID_CONFIG_KEY', async t => {
+  t.throws(() => apollo({
+    keys: {
+      FOO: {
+        key: 1
+      }
+    }
+  }), {
+    code: 'INVALID_CONFIG_KEY'
+  })
+})
+
+test('EMPTY_KEY_OPTIONS', async t => {
+  t.throws(() => apollo({
+    keys: {
+      FOO: []
+    }
+  }), {
+    code: 'EMPTY_KEY_OPTIONS'
+  })
+})
+
+test.serial('integrated', async t => {
   const client = apollo({
     host,
     appId,
@@ -42,8 +87,28 @@ test('integrated', async t => {
     }
   })
 
+  const wait = new Promise(resolve => {
+    client.once('change', e => {
+      t.is(e.key, 'FOO')
+      t.is(e.oldValue, 'foo')
+      t.is(e.newValue, 'newFoo')
+      resolve()
+    })
+  })
+
   t.is(client, await client.ready())
 
   t.is(client.get('FOO'), 'foo')
   t.is(client.get('FOO2'), 'foo2')
+
+  t.throws(() => client.get('BAR'), {
+    code: 'KEY_NOT_DECLARED'
+  })
+
+  aFoo
+  .set('foo', 'newFoo')
+  .set('not-used', 'not-used2')
+  .publish()
+
+  return wait
 })

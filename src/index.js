@@ -62,7 +62,7 @@ const formatKeyOptions = (defaults, rawKeyOptions, key) => {
   //   namespace: 'common'
   // }
   if (!isString(rawKeyOptions.key)) {
-    throw error('INVALID_CONFIG_KEY', key)
+    throw error('INVALID_CONFIG_KEY', key, rawKeyOptions.key)
   }
 
   // Merge with the default options
