@@ -11,10 +11,24 @@ E('EMPTY_KEY_OPTIONS', 'options for key "%s" should not be an empty array')
 
 E('KEY_NOT_DECLARED', 'key "%s" is not declared')
 
-const configNotFoundError = (key, clients) => {
+E('CONFIG_KEY_NOT_FOUND',
+  'no config key for "%s" found in apollo config service:%s')
 
+const configNotFoundError = (key, clients) => {
+  const details = clients.map(({
+    client, configKey, options
+  }) => `
+- config key "${configKey}" not found in
+  - host: "${options.host}"
+  - appId: "${options.appId}"
+  - cluster: "${client.cluster}"
+  - namespace: "${client.namespace}"`)
+  .join('')
+
+  return error('CONFIG_KEY_NOT_FOUND', key, details)
 }
 
 module.exports = {
-  error
+  error,
+  configNotFoundError
 }

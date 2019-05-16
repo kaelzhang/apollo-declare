@@ -38,7 +38,7 @@ const assignKeyOptions = (host, opts, key) => {
       return
     }
 
-    throw error('INVALID_OPTION_FOR_KEY', k, key)
+    throw error('INVALID_KEY_OPTION', k, key)
   })
 
   return host
@@ -55,51 +55,61 @@ const formatKeyOptions = (defaults, rawKeyOptions, key) => {
       key: rawKeyOptions
     }
   }
+
   // else:
   // 'REDIS_HOST': {
   //   key: 'redis.host',
   //   namespace: 'common'
   // }
-
   if (!isString(rawKeyOptions.key)) {
     throw error('INVALID_CONFIG_KEY', key)
   }
 
   // Merge with the default options
-  const options = {
+  const {
+    key: configKey,
+    ...opts
+  } = rawKeyOptions
+
+  const {
+    cluster,
+    namespace,
+    ...options
+  } = assignKeyOptions({
     ...defaults
+  }, opts, key)
+
+  return {
+    configKey,
+    cluster,
+    namespace,
+    options
   }
-
-  return assignKeyOptions(options, rawKeyOptions, key)
-}
-
-const associateClientAndKey = (client, configKey, key) => {
-  const map = client[MAP_CONFIGKEY_KEY]
-  const keySet = map[configKey] || (map[configKey] = new Set())
-
-  keySet.add(key)
 }
 
 class ApolloClient extends EventEmitter {
   constructor ({
-    keys,
+    keys = {},
     ...apolloOptions
   } = {}) {
     super()
 
     this._apolloOptions = apolloOptions
     this._apollos = Object.create(null)
-    this._clients = []
+    this._clients = new Set()
     this._keyClients = Object.create(null)
     this._values = Object.create(null)
 
-    Object.keys(this._keys).forEach(k => {
-      this._addKey(k, this._keys[k])
+    Object.keys(keys).forEach(k => {
+      this._addKey(k, keys[k])
     })
   }
 
   _addKey (key, rawKeyOptions) {
-    const optionsList = makeArray(rawKeyOptions).map(formatKeyOptions)
+    const optionsList = makeArray(rawKeyOptions).map(
+      raw => formatKeyOptions(this._apolloOptions, raw, key)
+    )
+
     if (optionsList.length === 0) {
       throw error('EMPTY_KEY_OPTIONS', key)
     }
@@ -112,44 +122,52 @@ class ApolloClient extends EventEmitter {
   _add (key, optionsList) {
     this._keyClients[key] = optionsList.map(
       ({
-        key: configKey,
+        configKey,
         cluster,
         namespace,
-        ...options
+        options
       }) => {
-        const client = this._getClient(options)
+        const client = this._getApollo(options)
         // ctrip-apollo will manage duplication of cluster name
         .cluster(cluster)
         .namespace(namespace)
 
-        associateClientAndKey(client, configKey, key)
+        this._associateClientAndKey(client, configKey, key)
 
         return {
           client,
-          configKey
+          configKey,
+          options
         }
       }
     )
   }
 
-  _getClient (options) {
+  _getApollo (options) {
     const id = uniqueKey(options)
 
-    const defined = id in this._apollos
-    if (defined) {
-      return this._apollos[id]
+    return this._apollos[id] || (
+      this._apollos[id] = apollo(options)
+    )
+  }
+
+  _associateClientAndKey (client, configKey, key) {
+    this._clients.add(client)
+
+    const initialized = MAP_CONFIGKEY_KEY in client
+
+    const map = initialized
+      ? client[MAP_CONFIGKEY_KEY]
+      : (client[MAP_CONFIGKEY_KEY] = Object.create(null))
+    const keySet = map[configKey] || (map[configKey] = new Set())
+
+    keySet.add(key)
+
+    if (!initialized) {
+      client.on('change', e => {
+        this._applyChange(e.key, map)
+      })
     }
-
-    const client = this._apollos[id] = apollo(options)
-    this._clients.push(client)
-
-    const map = client[MAP_CONFIGKEY_KEY] = Object.create(null)
-
-    client.on('change', ({key}) => {
-      this._applyChange(key, map)
-    })
-
-    return client
   }
 
   _applyChange (configKey, map) {
@@ -180,7 +198,7 @@ class ApolloClient extends EventEmitter {
   }
 
   async ready () {
-    const tasks = this._clients.map(client => client.ready())
+    const tasks = [...this._clients].map(client => client.ready())
     await Promise.all(tasks)
 
     // Validate and set values of keys
