@@ -21,7 +21,11 @@
     "url": "git://github.com/kaelzhang/apollo-declare.git"
   },
   "keywords": [
-    "apollo-declare"
+    "apollo-declare",
+    "ctrip-apollo",
+    "configuration",
+    "config service",
+    "apollo-client"
   ],
   "engines": {
     "node": ">= 6"
@@ -38,15 +42,17 @@
     "url": "https://github.com/kaelzhang/apollo-declare/issues"
   },
   "devDependencies": {
-    "@ostai/eslint-config": "^3.1.0",
+    "@ostai/eslint-config": "^3.1.1",
     "apollo-mock-server": "^1.2.0",
     "ava": "^1.4.1",
-    "codecov": "^3.4.0",
+    "codecov": "^3.5.0",
     "eslint": "^5.16.0",
     "eslint-plugin-import": "^2.17.2",
     "nyc": "^14.1.1"
   },
   "dependencies": {
-    "ctrip-apollo": "^4.3.0"
+    "core-util-is": "^1.0.2",
+    "ctrip-apollo": "^4.4.0",
+    "err-object": "^4.3.1"
   }
 }

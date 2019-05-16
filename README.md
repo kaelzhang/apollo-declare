@@ -38,7 +38,7 @@ declare({
     SENTRY_HOST: 'sentry.host',
     REDIS_HOST: {
       key: 'redis.host',
-      // Use a different namespace
+      // Use a different namespace other than `default`
       namespace: 'common'
     },
 
@@ -56,6 +56,7 @@ declare({
     ]
   }
 })
+// Emits when some configuration changes
 .on('change', ({key, oldValue, newValue}) => {
   process.env[key] = newValue
 })
@@ -112,9 +113,17 @@ Get the value of config `key`
 
 ### client.each(callback): void
 
-- **callback** `Function(key: string, value: string)`
+- **callback** `Function(value: string, key: string)`
 
 Executes the provided function `callback` once for each configuration key.
+
+### Event: 'change'
+
+- **key** `string` config key
+- **newValue** `string` the new value of the key
+- **oldValue** `string` the old value of the key
+
+
 
 ## License
 
