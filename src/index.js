@@ -185,7 +185,10 @@ class ApolloClient extends EventEmitter {
     const oldValue = this._values[key]
     const newValue = this.get(key)
 
+    // istanbul ignore next
     if (oldValue === newValue) {
+      // For better fault tolerance
+      // istanbul ignore next
       return
     }
 

@@ -1,5 +1,5 @@
 const test = require('ava')
-// const log = require('util').debuglog('apollo-declare')
+const log = require('util').debuglog('apollo-declare')
 const apollo = require('..')
 const {
   prepare,
@@ -111,4 +111,44 @@ test.serial('integrated', async t => {
   .publish()
 
   return wait
+})
+
+test.serial('multiple resource', async t => {
+  const client = apollo({
+    host,
+    appId,
+    keys: {
+      FOO: 'foo',
+      FOO2: [
+        'foo', {
+          key: 'foo',
+          namespace: 'foo2'
+        }
+      ]
+    }
+  })
+
+  await client.ready()
+
+  t.is(client.get('FOO2'), 'newFoo')
+})
+
+test.serial('not found', async t => {
+  const client = apollo({
+    host,
+    appId,
+    keys: {
+      FOO: 'foo2'
+    }
+  })
+
+  try {
+    await client.ready()
+  } catch (err) {
+    log('not found: %s', err.message)
+    t.is(err.code, 'CONFIG_NOT_FOUND')
+    return
+  }
+
+  t.fail('should fail')
 })
