@@ -15,7 +15,7 @@
 
 # apollo-declare
 
-[ctrip-apollo](https://github.com/kaelzhang/ctrip-apollo)(The Ctrip's [apollo](https://github.com/ctripcorp/apollo) client) with pre-declared configuration keys
+[ctrip-apollo](https://github.com/kaelzhang/ctrip-apollo)(the Ctrip's [apollo](https://github.com/ctripcorp/apollo) client) with pre-declared configuration keys.
 
 ## Install
 
@@ -28,47 +28,89 @@ $ npm i apollo-declare
 ```js
 const declare = require('apollo-declare')
 
+const host = 'http://localhost:8070'
+const appId = '100004458'
+const namespace = 'default'
+
 declare({
-  host: 'http://localhost:8070',
-  appId: '100004458',
-  namespace: 'default',
+  host, appId, namespace,
   keys: {
     // Define `SENTRY_HOST` as
     // the value of the configuration key `sentry.host`
-    SENTRY_HOST: 'sentry.host',
-    REDIS_HOST: {
-      key: 'redis.host',
-      // Use a different namespace other than `default`
-      namespace: 'common'
-    },
+    REDIS_HOST: 'redis.host'
+  }
+})
+// Emits when the value of a config key changes
+.on('change', e => {
+  // Do something with `e`
+})
+.ready()
+.then(client => {
+  // Get value by key
+  client.get('REDIS_HOST')
 
-    // Define fallbacks
+  // For each KV pair
+  client.each((value, key) => {
+    console.log(value, key)
+    // output: 192.168.10.1 REDIS_HOST
+  })
+})
+```
+
+### Declare two keys in different namespaces
+
+```js
+declare({
+  host, appId, namespace,
+  keys: {
+    // Equivalent to:
+    // REDIS_HOST: {
+    //   key: 'redis.host'
+    // }
+    REDIS_HOST: 'redis.host',
+
+    SENTRY_HOST: {
+      key: 'sentry.host',
+      // Which override namespace `default` with `common` for SENTRY_HOST
+      namespace: 'common'
+    }
+  }
+})
+```
+
+### Use the first available value among a config set
+
+If we have two namespaces, `'default'` and `'common'`.
+
+In namespace `'default'`, there is no config key named `'dynamodb.region'`. While in namespace `'common'`, the value of `'dynamodb.region'` is `'ap-northeast-10'`.
+
+```js
+// Inside a async function
+const client = apollo({
+  host, appId,
+  namespace: 'default',
+  keys: {
     DYNAMO_DB_HOST: [
-      // The config key `dynamodb.host` in namespace `default`
+      // The config key `dynamodb.region` in namespace `default`
       // has higher priority than the one in namespace `common`
-      'dynamodb.host',
-      // If `dynamodb.host` is not defined in namespace `default`,
-      // then common.dynamodb.host will be used
       {
-        key: 'dynamodb.host',
+        key: 'dynamodb.region'
+        // namespace: inherit from the default namespace
+      },
+      // If `dynamodb.region` is not defined in namespace `default`,
+      // then common.dynamodb.region will be used
+      {
+        key: 'dynamodb.region',
         namespace: 'common'
       }
     ]
   }
 })
-// Emits when some configuration changes
-.on('change', ({key, oldValue, newValue}) => {
-  process.env[key] = newValue
-})
-.ready(client => {
-  client.get('REDIS_HOST')
-  // 12.0.0.139
 
-  // For each KV pair
-  client.each((value, key) => {
-    process.env[key] = value
-  })
-})
+await client.ready()
+
+console.log(client.get('DYNAMO_DB_HOST'))
+// ap-northeast-10
 ```
 
 ## declare(options): ApolloClient
@@ -77,9 +119,9 @@ declare({
 
 ```ts
 interface DeclareOptions extends ApolloOptions {
-  // The default cluster name
+  // The default cluster name which defaults to `default`
   cluster?: string
-  // The default namespace name
+  // The default namespace name which defaults to `application`
   namespace?: string
   // The key declarations
   keys: {
@@ -115,7 +157,7 @@ Get the value of config `key`
 
 - **callback** `Function(value: string, key: string)`
 
-Executes the provided function `callback` once for each configuration key.
+Executes the provided function `callback` once for each defined key.
 
 ### Event: 'change'
 
@@ -123,7 +165,20 @@ Executes the provided function `callback` once for each configuration key.
 - **newValue** `string` the new value of the key
 - **oldValue** `string` the old value of the key
 
+Emits when the value of a config key changes
 
+```js
+client.on('change', ({
+  key,
+  newValue,
+  oldValue
+}) => {
+  console.log(`key "${key}" changes: "${oldValue}" -> "${newValue}"`)
+
+  // Update process.env
+  process.env[key] = newValue
+})
+```
 
 ## License
 

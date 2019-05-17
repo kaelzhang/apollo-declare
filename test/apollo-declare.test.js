@@ -145,7 +145,7 @@ test.serial('not found', async t => {
   try {
     await client.ready()
   } catch (err) {
-    log('not found: %s', err.message)
+    log(err.message)
     t.is(err.code, 'CONFIG_NOT_FOUND')
     return
   }
