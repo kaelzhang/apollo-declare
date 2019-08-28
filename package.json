@@ -1,6 +1,6 @@
 {
   "name": "apollo-declare",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "The Ctrip's apollo client with pre-declared configuration keys",
   "main": "src/index.js",
   "scripts": {
@@ -42,17 +42,17 @@
     "url": "https://github.com/kaelzhang/apollo-declare/issues"
   },
   "devDependencies": {
-    "@ostai/eslint-config": "^3.1.1",
+    "@ostai/eslint-config": "^3.4.3",
     "apollo-mock-server": "^1.2.0",
-    "ava": "^1.4.1",
+    "ava": "^2.3.0",
     "codecov": "^3.5.0",
-    "eslint": "^5.16.0",
-    "eslint-plugin-import": "^2.17.2",
+    "eslint": "^6.2.2",
+    "eslint-plugin-import": "^2.18.2",
     "nyc": "^14.1.1"
   },
   "dependencies": {
     "core-util-is": "^1.0.2",
-    "ctrip-apollo": "^4.4.0",
-    "err-object": "^4.3.1"
+    "ctrip-apollo": "^4.4.2",
+    "err-object": "^5.1.4"
   }
 }
